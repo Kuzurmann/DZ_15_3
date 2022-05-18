@@ -1,51 +1,139 @@
+from utils import connect
 import sqlite3
-import json
-import query
-from flask import Flask, request, jsonify
-import logging
 
-OLD_DATABASE = 'animal.db'
-app = Flask(__name__)
-app.config['JSON_AS_ASCII'] = False
+query_1 = """
+CREATE TABLE colors (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+color VARCHAR(30)
+    )
+"""
+# print(connect(query_1))
+query_2 = """
+          CREATE TABLE animals_colors (
+          animal_id INTEGER,
+          color_id INTEGER,
+          FOREIGN KEY (animal_id) REFERENCES animal_finally(id)
+          FOREIGN KEY (color_id) REFERENCES colors(id)
 
+)
+"""
+# print(connect(query_2))
+query_3 = """
+          INSERT INTO colors (color)
+          SELECT DISTINCT * FROM (
+            SELECT DISTINCT color1 as color 
+            FROM animals
+          UNION ALL
+            SELECT DISTINCT color2 as color
+            FROM animals
+          )
+"""
+# print(connect(query_3))
+query_4 = """
+          INSERT INTO animals_colors (animal_id, color_id)
+          SELECT DISTINCT animals."index", colors.id
+          FROM animals
+          JOIN colors
+              ON colors.color = animals.color1
+          UNION ALL
+          SELECT DISTINCT animals."index", colors.id
+          FROM animals
+          JOIN colors ON colors.color = animals.color2
+"""
+# print(connect(query_4))
 
-def get_sqlite_query(query, base=OLD_DATABASE, is_script=False):
-    """Читаем старую базу данных"""
-    with sqlite3.connect(base) as connection:
-        cursor = connection.cursor()
-        if is_script:
-            result = cursor.executescript(query)
-        else:
-            result = cursor.execute(query)
-        return result.fetchall()
+query_5 = """
+          CREATE TABLE outcome (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          subtype varchar(50),
+          "type" varchar(50),
+          "month" integer,
+          "year" integer
+)
+"""
+# print(connect(query_5))
+query_6 = """
+          INSERT INTO outcome (subtype, "type", "month", "year")
+          SELECT DISTINCT animals.outcome_subtype, animals.outcome_type, animals.outcome_month, animals.outcome_year
+          FROM animals
+"""
+# print(connect(query_6))
+query_7 = """
+          CREATE TABLE breed (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          breed varchar(50)
+        )
+"""
+# print(connect(query_7))
+query_8 = """
+          CREATE TABLE animals_breed (
+          animal_id integer,
+          breed_id integer,
+          FOREIGN KEY (animal_id) REFERENCES animals("index")
+          FOREIGN KEY (breed_id) REFERENCES breed(id)
+)
+"""
+# print(connect(query_8))
+query_infinity = """
+                 CREATE TABLE types (
+                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                 types varchar(100)
+        )
+"""
 
+query_infinity_3 = """
+                   INSERT INTO types (types)
+                   SELECT DISTINCT animals.animal_type as types
+                   FROM animals
 
-def get_all_by_id(id):
-    query = f"""
-    SELECT * 
-    FROM animals.final
-    WHERE id == {id}
+"""
+
+query_9 = """
+          INSERT INTO animals_breed (animal_id, breed_id)
+          SELECT DISTINCT animals."index" as animal_id, breed.id as breed_id
+          FROM animals
+          JOIN breed ON breed.breed = animals.breed
+
+"""
+# print(connect(query_9))
+query_10 = """
+          INSERT INTO breed (breed)
+          SELECT DISTINCT animals.breed
+          FROM animals
+"""
+# print(connect(query_10))
+
+query_13 = """
+           CREATE TABLE animals_finally (
+           id INTEGER PRIMARY KEY AUTOINCREMENT,
+           age_upon_outcome VARCHAR(50),
+           animal_id INTEGER,
+           "name" VARCHAR(50),
+           date_of_birth varchar(50),
+           outcome_id integer,
+           breed_id integer,
+           type_id integer,
+           FOREIGN KEY (outcome_id) REFERENCES outcome(id)
+           FOREIGN KEY (breed_id) REFERENCES breed(id)
+           FOREIGN KEY (type_id) REFERENCES types(id)
+           )
+"""
+# print(connect(query_13))
+query_14 = """
+           INSERT INTO animals_finally (age_upon_outcome, animal_id, "name", 
+           date_of_birth, outcome_id, breed_id, type_id)
+           SELECT DISTINCT animals.age_upon_outcome, animals.animal_id, animals."name", 
+           animals.date_of_birth, outcome.id, breed.id, types.id
+           FROM animals
+           LEFT JOIN outcome ON outcome.subtype = animals.outcome_subtype
+           AND outcome.type = animals.outcome_type
+           AND outcome.month = animals.outcome_month
+           AND outcome.year = animals.outcome_year
+           JOIN breed ON breed.breed = animals.breed
+           JOIN types ON types.types = animals.animal_type
     """
-
-    raw = get_sqlite_query(query, is_script=False)
-    result_dict = {'id': raw[0][0], 'age_upon_outcome': raw[0][1], 'animals_id': raw[0][2],
-                   'name': raw[0][3], 'animals_type': raw[0][4], 'animals_breed': raw[0][5],
-                   'color1': raw[0][6], 'color2': raw[0][7], 'date_of_birth': raw[0][8][0:10],
-                   'outcome_subtype': raw[0][9], 'id_outcome_type': raw[0][10], 'outcome_month': raw[0][11],
-                   'outcome_year': raw[0][12]}
-    return result_dict
-
-
-@app.route('/<id>/')
-def get_by_id(id):
-    """ Шаг 1. Поиск по названию самого свежего """
-    logging.info(f'Ищем по ID: {id}')
-
-    animal = get_all_by_id(id)  # Словарь с данными по ОДНОМУ посту
-    logging.info(f'Функция поиска вернула: {animal}')
-
-    return jsonify(animal)
+# print(connect(query_14))
 
 
 if __name__ == '__main__':
-    app.run()
+    print(connect(query_14))
